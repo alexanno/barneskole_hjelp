@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gloseprøve – Week 21-22 Nature</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2d9e5f;
+    --green-light: #e8f8ef;
+    --green-dark: #1a6e3f;
+    --yellow: #f5c842;
+    --red: #e84c4c;
+    --bg: #f4faf7;
+    --card: #ffffff;
+    --text: #1a2e22;
+    --muted: #7a9e88;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  header .leaf {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--green-dark);
+    line-height: 1.1;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 4px;
+  }
+
+  /* Mode selector */
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: #dff0e8;
+    border-radius: 14px;
+    padding: 5px;
+  }
+
+  .mode-tabs button {
+    flex: 1;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    background: transparent;
+    color: var(--green-dark);
+    transition: all 0.2s;
+  }
+
+  .mode-tabs button.active {
+    background: var(--green);
+    color: white;
+    box-shadow: 0 2px 8px rgba(45,158,95,0.3);
+  }
+
+  /* Progress */
+  .progress-bar-wrap {
+    width: 100%;
+    max-width: 480px;
+    background: #dff0e8;
+    border-radius: 99px;
+    height: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--green);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-label {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+    text-align: right;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--green), #6fcf97);
+  }
+
+  .card .question-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .card .question-word {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--green-dark);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .card .question-hint {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* Input mode */
+  .input-wrap {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .input-wrap input {
+    flex: 1;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 12px 16px;
+    border: 2.5px solid #c8e6d4;
+    border-radius: 12px;
+    outline: none;
+    color: var(--text);
+    background: var(--green-light);
+    transition: border-color 0.2s;
+  }
+
+  .input-wrap input:focus {
+    border-color: var(--green);
+  }
+
+  .input-wrap input.correct {
+    border-color: var(--green);
+    background: #d4f5e2;
+    color: var(--green-dark);
+  }
+
+  .input-wrap input.wrong {
+    border-color: var(--red);
+    background: #fdeaea;
+    color: var(--red);
+  }
+
+  .btn-check {
+    padding: 12px 18px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .btn-check:hover { background: var(--green-dark); }
+  .btn-check:active { transform: scale(0.96); }
+
+  /* Multiple choice */
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .choice-btn {
+    padding: 14px 10px;
+    border: 2.5px solid #c8e6d4;
+    border-radius: 14px;
+    background: var(--green-light);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    color: var(--text);
+  }
+
+  .choice-btn:hover:not(:disabled) {
+    border-color: var(--green);
+    background: #c5efd8;
+    transform: translateY(-2px);
+  }
+
+  .choice-btn.correct {
+    border-color: var(--green);
+    background: #d4f5e2;
+    color: var(--green-dark);
+  }
+
+  .choice-btn.wrong {
+    border-color: var(--red);
+    background: #fdeaea;
+    color: var(--red);
+  }
+
+  .choice-btn:disabled { cursor: default; }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 16px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    display: none;
+    animation: popIn 0.25s ease;
+  }
+
+  .feedback.show { display: block; }
+  .feedback.correct { background: #d4f5e2; color: var(--green-dark); }
+  .feedback.wrong { background: #fdeaea; color: var(--red); }
+
+  @keyframes popIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Next button */
+  .btn-next {
+    margin-top: 16px;
+    width: 100%;
+    padding: 13px;
+    background: var(--green-dark);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    display: none;
+    transition: background 0.2s;
+  }
+
+  .btn-next.show { display: block; }
+  .btn-next:hover { background: var(--green); }
+
+  /* Score screen */
+  #score-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .score-card {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 36px 28px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .score-emoji { font-size: 3.5rem; }
+  .score-title { font-size: 1.8rem; font-weight: 900; color: var(--green-dark); margin: 10px 0 4px; }
+  .score-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 20px; }
+  .score-big { font-size: 4rem; font-weight: 900; color: var(--green); line-height: 1; margin-bottom: 8px; }
+
+  .mistake-list {
+    text-align: left;
+    margin: 16px 0;
+    background: #fdeaea;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .mistake-list h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--red); margin-bottom: 8px; }
+
+  .mistake-item {
+    font-size: 0.9rem;
+    color: var(--text);
+    padding: 3px 0;
+  }
+
+  .btn-restart {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.2s;
+  }
+
+  .btn-restart:hover { background: var(--green-dark); }
+
+  /* Flashcard mode */
+  .flashcard {
+    perspective: 800px;
+    width: 100%;
+    max-width: 480px;
+    height: 200px;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+
+  .flashcard-inner {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+  }
+
+  .flashcard-inner.flipped { transform: rotateY(180deg); }
+
+  .flashcard-front, .flashcard-back {
+    position: absolute;
+    width: 100%; height: 100%;
+    backface-visibility: hidden;
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .flashcard-back { transform: rotateY(180deg); background: var(--green-light); }
+
+  .fc-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; }
+  .fc-word { font-size: 2.4rem; font-weight: 900; color: var(--green-dark); }
+  .fc-hint { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+
+  .fc-nav {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .fc-nav button {
+    flex: 1;
+    padding: 11px;
+    border: 2.5px solid #c8e6d4;
+    border-radius: 12px;
+    background: white;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    color: var(--green-dark);
+    transition: all 0.18s;
+  }
+
+  .fc-nav button:hover { background: var(--green-light); border-color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="leaf">🌿</span>
+  <h1>Gloseprøve</h1>
+  <p>Week 21–22 · Nature · Engelsk ↔ Norsk</p>
+</header>
+
+<div class="mode-tabs">
+  <button onclick="setMode('multiple')" id="tab-multiple" class="active">Flervalg</button>
+  <button onclick="setMode('type')" id="tab-type">Skriv svar</button>
+  <button onclick="setMode('flash')" id="tab-flash">Flashkort</button>
+</div>
+
+<!-- Quiz area -->
+<div id="quiz-area" style="width:100%;max-width:480px;">
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+  <div class="progress-label" id="progress-label"></div>
+
+  <div class="card" id="quiz-card">
+    <div class="question-label" id="q-label"></div>
+    <div class="question-word" id="q-word"></div>
+    <div class="question-hint" id="q-hint"></div>
+
+    <!-- Multiple choice -->
+    <div class="choices" id="choices-wrap"></div>
+
+    <!-- Type mode -->
+    <div class="input-wrap" id="input-wrap" style="display:none;">
+      <input type="text" id="answer-input" placeholder="Skriv oversettelse…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other">
+      <button class="btn-check" onclick="checkInput()">✓</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Neste →</button>
+  </div>
+</div>
+
+<!-- Flashcard area -->
+<div id="flash-area" style="display:none;width:100%;max-width:480px;flex-direction:column;align-items:center;">
+  <div class="progress-label" id="fc-label" style="text-align:right;width:100%;"></div>
+  <div class="flashcard" onclick="flipCard()">
+    <div class="flashcard-inner" id="fc-inner">
+      <div class="flashcard-front">
+        <div class="fc-label">Engelsk</div>
+        <div class="fc-word" id="fc-front-word"></div>
+        <div class="fc-hint">Trykk for å se norsk</div>
+      </div>
+      <div class="flashcard-back">
+        <div class="fc-label">Norsk</div>
+        <div class="fc-word" id="fc-back-word"></div>
+        <div class="fc-hint">🌿</div>
+      </div>
+    </div>
+  </div>
+  <div class="fc-nav">
+    <button onclick="fcNav(-1)">← Forrige</button>
+    <button onclick="fcNav(1)">Neste →</button>
+  </div>
+</div>
+
+<!-- Score screen -->
+<div id="score-screen">
+  <div class="score-card">
+    <div class="score-emoji" id="score-emoji"></div>
+    <div class="score-title" id="score-title"></div>
+    <div class="score-sub" id="score-sub"></div>
+    <div class="score-big" id="score-big"></div>
+    <div class="mistake-list" id="mistake-list" style="display:none;">
+      <h3>Øv litt mer på disse 📖</h3>
+      <div id="mistake-items"></div>
+    </div>
+    <button class="btn-restart" onclick="restart()">🔄 Prøv igjen</button>
+  </div>
+</div>
+
+<script>
+const GLOSSARY = [
+  { en: "nature",      no: "natur" },
+  { en: "reduce",      no: "redusere" },
+  { en: "reuse",       no: "gjenbruke" },
+  { en: "recycle",     no: "resirkulere" },
+  { en: "sustainable", no: "bærekraftig" },
+  { en: "environment", no: "miljø" },
+];
+
+let mode = 'multiple';
+let questions = [];
+let current = 0;
+let score = 0;
+let mistakes = [];
+let answered = false;
+
+// Build questions: both directions
+function buildQuestions() {
+  let q = [];
+  GLOSSARY.forEach(g => {
+    q.push({ ask: g.en, answer: g.no, direction: 'en→no', hint: 'Skriv på norsk' });
+    q.push({ ask: g.no, answer: g.en, direction: 'no→en', hint: 'Write in English' });
+  });
+  // Shuffle
+  for (let i = q.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [q[i], q[j]] = [q[j], q[i]];
+  }
+  return q;
+}
+
+function misspell(word) {
+  // Generate a plausible misspelling of the word
+  const strategies = [
+    // Double a random consonant
+    w => {
+      const consonants = [...w].map((c,i) => /[bcdfghjklmnpqrstvwxyz]/i.test(c) ? i : -1).filter(i => i > 0 && i < w.length - 1);
+      if (!consonants.length) return null;
+      const i = consonants[Math.floor(Math.random() * consonants.length)];
+      return w.slice(0, i) + w[i] + w.slice(i);
+    },
+    // Remove a random vowel (not first/last char)
+    w => {
+      const vowels = [...w].map((c,i) => /[aeiouæøå]/i.test(c) ? i : -1).filter(i => i > 0 && i < w.length - 1);
+      if (!vowels.length) return null;
+      const i = vowels[Math.floor(Math.random() * vowels.length)];
+      return w.slice(0, i) + w.slice(i + 1);
+    },
+    // Swap two adjacent middle chars
+    w => {
+      if (w.length < 4) return null;
+      const i = 1 + Math.floor(Math.random() * (w.length - 3));
+      return w.slice(0, i) + w[i+1] + w[i] + w.slice(i + 2);
+    },
+    // Replace a vowel with a different vowel
+    w => {
+      const vowelMap = { a:'e', e:'i', i:'e', o:'u', u:'o', æ:'e', ø:'o', å:'a' };
+      const vowels = [...w].map((c,i) => vowelMap[c.toLowerCase()] ? i : -1).filter(i => i > 0);
+      if (!vowels.length) return null;
+      const i = vowels[Math.floor(Math.random() * vowels.length)];
+      const replacement = vowelMap[w[i].toLowerCase()];
+      return w.slice(0, i) + replacement + w.slice(i + 1);
+    },
+  ];
+
+  // Try strategies in random order until we get a valid unique misspelling
+  const shuffled = strategies.sort(() => Math.random() - 0.5);
+  for (const fn of shuffled) {
+    const result = fn(word);
+    if (result && result !== word && result.length > 0) return result;
+  }
+  // Fallback: append extra letter
+  return word + word[word.length - 1];
+}
+
+function getWrongOptions(correct, direction) {
+  // 2 misspellings of the correct answer
+  const misspelling1 = misspell(correct);
+  let misspelling2 = misspell(correct);
+  // Make sure they're different from each other
+  let attempts = 0;
+  while (misspelling2 === misspelling1 && attempts++ < 10) {
+    misspelling2 = misspell(correct);
+  }
+
+  // 1 completely different word from the glossary
+  const otherPool = GLOSSARY.map(g => direction === 'en→no' ? g.no : g.en)
+    .filter(w => w !== correct);
+  const otherWord = otherPool[Math.floor(Math.random() * otherPool.length)];
+
+  return [misspelling1, misspelling2, otherWord];
+}
+
+function setMode(m) {
+  mode = m;
+  ['multiple','type','flash'].forEach(id => {
+    document.getElementById('tab-' + id).classList.toggle('active', id === m);
+  });
+
+  document.getElementById('quiz-area').style.display = m === 'flash' ? 'none' : 'block';
+  const fa = document.getElementById('flash-area');
+  fa.style.display = m === 'flash' ? 'flex' : 'none';
+  document.getElementById('score-screen').style.display = 'none';
+
+  if (m === 'flash') {
+    fcIndex = 0;
+    renderFlashcard();
+  } else {
+    restart();
+  }
+}
+
+function restart() {
+  questions = buildQuestions();
+  current = 0;
+  score = 0;
+  mistakes = [];
+  answered = false;
+  document.getElementById('score-screen').style.display = 'none';
+  document.getElementById('quiz-area').style.display = 'block';
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[current];
+  const total = questions.length;
+
+  document.getElementById('progress-bar').style.width = (current / total * 100) + '%';
+  document.getElementById('progress-label').textContent = current + ' / ' + total;
+  document.getElementById('q-label').textContent = q.direction === 'en→no' ? '🇬🇧 Engelsk → Norsk' : '🇳🇴 Norsk → Engelsk';
+  document.getElementById('q-word').textContent = q.ask;
+  document.getElementById('q-hint').textContent = q.hint;
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  const btnNext = document.getElementById('btn-next');
+  btnNext.className = 'btn-next';
+
+  const choicesWrap = document.getElementById('choices-wrap');
+  const inputWrap = document.getElementById('input-wrap');
+  const inp = document.getElementById('answer-input');
+
+  if (mode === 'multiple') {
+    choicesWrap.style.display = 'grid';
+    inputWrap.style.display = 'none';
+
+    const wrongs = getWrongOptions(q.answer, q.direction);
+    const opts = [q.answer, ...wrongs].sort(() => Math.random() - 0.5);
+
+    choicesWrap.innerHTML = '';
+    opts.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = opt;
+      btn.onclick = () => checkChoice(opt, q.answer, btn);
+      choicesWrap.appendChild(btn);
+    });
+
+  } else {
+    choicesWrap.style.display = 'none';
+    inputWrap.style.display = 'flex';
+    inp.value = '';
+    inp.className = '';
+    inp.disabled = false;
+    inp.focus();
+    inp.onkeydown = (e) => { if (e.key === 'Enter') checkInput(); };
+  }
+}
+
+function checkChoice(chosen, correct, btn) {
+  if (answered) return;
+  answered = true;
+
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correct) b.classList.add('correct');
+  });
+
+  const fb = document.getElementById('feedback');
+  if (chosen === correct) {
+    score++;
+    btn.classList.add('correct');
+    fb.textContent = '✅ Riktig!';
+    fb.className = 'feedback correct show';
+  } else {
+    btn.classList.add('wrong');
+    fb.textContent = '❌ Riktig svar: ' + correct;
+    fb.className = 'feedback wrong show';
+    mistakes.push(questions[current]);
+  }
+
+  document.getElementById('btn-next').className = 'btn-next show';
+}
+
+function checkInput() {
+  if (answered) return;
+  const inp = document.getElementById('answer-input');
+  const q = questions[current];
+  const given = inp.value.trim().toLowerCase();
+  const correct = q.answer.toLowerCase();
+  answered = true;
+  inp.disabled = true;
+
+  const fb = document.getElementById('feedback');
+  if (given === correct) {
+    score++;
+    inp.classList.add('correct');
+    fb.textContent = '✅ Riktig!';
+    fb.className = 'feedback correct show';
+  } else {
+    inp.classList.add('wrong');
+    fb.textContent = '❌ Riktig svar: ' + q.answer;
+    fb.className = 'feedback wrong show';
+    mistakes.push(q);
+  }
+
+  document.getElementById('btn-next').className = 'btn-next show';
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    showScore();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showScore() {
+  document.getElementById('quiz-area').style.display = 'none';
+  const ss = document.getElementById('score-screen');
+  ss.style.display = 'flex';
+
+  const pct = Math.round(score / questions.length * 100);
+  let emoji, title;
+  if (pct === 100) { emoji = '🌟'; title = 'Perfekt!'; }
+  else if (pct >= 80) { emoji = '🎉'; title = 'Veldig bra!'; }
+  else if (pct >= 60) { emoji = '👍'; title = 'Bra jobba!'; }
+  else { emoji = '📚'; title = 'Øv litt mer!'; }
+
+  document.getElementById('score-emoji').textContent = emoji;
+  document.getElementById('score-title').textContent = title;
+  document.getElementById('score-sub').textContent = 'Du fikk ' + score + ' av ' + questions.length + ' riktige';
+  document.getElementById('score-big').textContent = pct + '%';
+
+  if (mistakes.length > 0) {
+    const ml = document.getElementById('mistake-list');
+    ml.style.display = 'block';
+    document.getElementById('mistake-items').innerHTML = mistakes.map(m =>
+      `<div class="mistake-item">• ${m.ask} → <strong>${m.answer}</strong></div>`
+    ).join('');
+  }
+}
+
+// Flashcard
+let fcIndex = 0;
+let fcFlipped = false;
+
+function renderFlashcard() {
+  const g = GLOSSARY[fcIndex];
+  document.getElementById('fc-front-word').textContent = g.en;
+  document.getElementById('fc-back-word').textContent = g.no;
+  document.getElementById('fc-label').textContent = (fcIndex + 1) + ' / ' + GLOSSARY.length;
+  fcFlipped = false;
+  document.getElementById('fc-inner').classList.remove('flipped');
+}
+
+function flipCard() {
+  fcFlipped = !fcFlipped;
+  document.getElementById('fc-inner').classList.toggle('flipped', fcFlipped);
+}
+
+function fcNav(dir) {
+  fcIndex = (fcIndex + dir + GLOSSARY.length) % GLOSSARY.length;
+  renderFlashcard();
+}
+
+// Init
+restart();
+</script>
+</body>
+</html>
