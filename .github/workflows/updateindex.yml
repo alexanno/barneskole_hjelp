@@ -21,7 +21,11 @@ jobs:
           from datetime import datetime, timezone
 
           files = subprocess.check_output(["git", "ls-files"]).decode().strip().split("\n")
-          files = sorted(f for f in files if f and f != "index.html")
+          files = sorted(
+              f
+              for f in files
+              if f and f not in {"index.html", "LICENSE"} and not f.startswith(".github/")
+          )
 
           date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
