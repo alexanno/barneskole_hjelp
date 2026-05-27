@@ -1,0 +1,92 @@
+name: Update index.html
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate index.html
+        run: |
+          python3 << 'EOF'
+          import subprocess
+          from datetime import datetime, timezone
+
+          files = subprocess.check_output(["git", "ls-files"]).decode().strip().split("\n")
+          files = sorted(f for f in files if f and f != "index.html")
+
+          date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+          items = "\n".join(
+              f'      <li><a href="{f}">{f}</a></li>' for f in files
+          )
+
+          html = f"""<!DOCTYPE html>
+          <html lang="no">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Barneskole hjelp</title>
+            <style>
+              body {{
+                font-family: system-ui, sans-serif;
+                max-width: 700px;
+                margin: 40px auto;
+                padding: 0 20px;
+                background: #f9f9f9;
+                color: #222;
+              }}
+              h1 {{ color: #2c5f8a; }}
+              ul {{ list-style: none; padding: 0; }}
+              li {{
+                margin: 8px 0;
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 10px 16px;
+              }}
+              li a {{
+                text-decoration: none;
+                color: #2c5f8a;
+                font-size: 1rem;
+              }}
+              li a:hover {{ text-decoration: underline; }}
+              footer {{ margin-top: 40px; font-size: 0.8rem; color: #aaa; }}
+            </style>
+          </head>
+          <body>
+            <h1>Barneskole hjelp</h1>
+            <p>Filer i dette repositoriet:</p>
+            <ul>
+          {items}
+            </ul>
+            <footer>Sist oppdatert: {date_str}</footer>
+          </body>
+          </html>
+          """
+
+          with open("index.html", "w") as fh:
+              fh.write(html)
+
+          print(f"index.html generated with {len(files)} file(s)")
+          EOF
+
+      - name: Commit and push index.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes to index.html"
+          else
+            git commit -m "chore: update index.html [skip ci]"
+            git push
+          fi
