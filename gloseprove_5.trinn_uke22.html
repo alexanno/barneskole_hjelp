@@ -405,14 +405,174 @@
   }
 
   .fc-nav button:hover { background: var(--green-light); border-color: var(--green); }
+
+  /* Style toggle button */
+  .style-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    padding: 7px 13px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.82rem;
+    cursor: pointer;
+    background: #dff0e8;
+    color: var(--green-dark);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    transition: all 0.2s;
+    z-index: 999;
+  }
+  .style-toggle:hover { filter: brightness(0.95); }
+
+  /* ── GAMING THEME ───────────────────────────── */
+  body.gaming {
+    --green: #7c3aed;
+    --green-light: #1e1b4b;
+    --green-dark: #c4b5fd;
+    --yellow: #facc15;
+    --red: #f87171;
+    --bg: #0f0a1e;
+    --card: #1a1035;
+    --text: #e2d9ff;
+    --muted: #7c6fa0;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  body.gaming .style-toggle {
+    background: #7c3aed;
+    color: #fff;
+  }
+
+  body.gaming header h1 { color: var(--green-dark); }
+  body.gaming header .leaf { filter: hue-rotate(200deg); }
+
+  body.gaming .mode-tabs {
+    background: #1e1b4b;
+  }
+
+  body.gaming .mode-tabs button {
+    color: #c4b5fd;
+  }
+
+  body.gaming .mode-tabs button.active {
+    background: #7c3aed;
+    box-shadow: 0 0 12px rgba(124,58,237,0.6);
+  }
+
+  body.gaming .progress-bar-wrap { background: #1e1b4b; }
+  body.gaming .progress-bar {
+    background: linear-gradient(90deg, #7c3aed, #a855f7);
+    box-shadow: 0 0 8px rgba(168,85,247,0.7);
+  }
+
+  body.gaming .card {
+    background: var(--card);
+    box-shadow: 0 0 0 1.5px #7c3aed, 0 8px 32px rgba(124,58,237,0.25);
+  }
+
+  body.gaming .card::before {
+    background: linear-gradient(90deg, #7c3aed, #a855f7, #ec4899);
+  }
+
+  body.gaming .question-word { color: #c4b5fd; }
+
+  body.gaming .input-wrap input {
+    background: #0f0a1e;
+    border-color: #4c1d95;
+    color: var(--text);
+  }
+
+  body.gaming .input-wrap input:focus { border-color: #7c3aed; }
+  body.gaming .input-wrap input.correct { background: #14532d; border-color: #22c55e; color: #86efac; }
+  body.gaming .input-wrap input.wrong  { background: #450a0a; border-color: #ef4444; color: #fca5a5; }
+
+  body.gaming .btn-check {
+    background: #7c3aed;
+    box-shadow: 0 0 10px rgba(124,58,237,0.5);
+  }
+  body.gaming .btn-check:hover { background: #6d28d9; }
+
+  body.gaming .choice-btn {
+    background: #0f0a1e;
+    border-color: #4c1d95;
+    color: var(--text);
+  }
+  body.gaming .choice-btn:hover:not(:disabled) {
+    border-color: #7c3aed;
+    background: #1e1b4b;
+    box-shadow: 0 0 8px rgba(124,58,237,0.4);
+  }
+  body.gaming .choice-btn.correct { border-color: #22c55e; background: #14532d; color: #86efac; }
+  body.gaming .choice-btn.wrong   { border-color: #ef4444; background: #450a0a; color: #fca5a5; }
+
+  body.gaming .feedback.correct { background: #14532d; color: #86efac; }
+  body.gaming .feedback.wrong   { background: #450a0a; color: #fca5a5; }
+
+  body.gaming .btn-next { background: #6d28d9; }
+  body.gaming .btn-next:hover { background: #7c3aed; }
+
+  body.gaming .score-card {
+    background: var(--card);
+    box-shadow: 0 0 0 1.5px #7c3aed, 0 8px 32px rgba(124,58,237,0.3);
+  }
+  body.gaming .score-title { color: #c4b5fd; }
+  body.gaming .score-big   { color: #a855f7; text-shadow: 0 0 20px rgba(168,85,247,0.6); }
+
+  body.gaming .mistake-list { background: #450a0a; }
+  body.gaming .mistake-list h3 { color: #f87171; }
+
+  body.gaming .btn-restart {
+    background: #7c3aed;
+    box-shadow: 0 0 14px rgba(124,58,237,0.5);
+  }
+  body.gaming .btn-restart:hover { background: #6d28d9; }
+
+  body.gaming .flashcard-front,
+  body.gaming .flashcard-back {
+    background: var(--card);
+    box-shadow: 0 0 0 1.5px #7c3aed, 0 8px 24px rgba(124,58,237,0.3);
+  }
+  body.gaming .flashcard-back { background: #1e1b4b; }
+  body.gaming .fc-word { color: #c4b5fd; }
+
+  body.gaming .fc-nav button {
+    background: #0f0a1e;
+    border-color: #4c1d95;
+    color: #c4b5fd;
+  }
+  body.gaming .fc-nav button:hover { background: #1e1b4b; border-color: #7c3aed; }
+
+  /* XP bar pulse animation */
+  @keyframes xpPulse {
+    0%,100% { box-shadow: 0 0 8px rgba(168,85,247,0.7); }
+    50%      { box-shadow: 0 0 18px rgba(168,85,247,1); }
+  }
+  body.gaming .progress-bar { animation: xpPulse 2s ease-in-out infinite; }
+
+  /* XP badge */
+  .xp-badge {
+    display: none;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #facc15;
+    text-shadow: 0 0 8px rgba(250,204,21,0.6);
+    margin-bottom: 4px;
+  }
+  body.gaming .xp-badge { display: block; }
 </style>
 </head>
 <body>
 
+<button class="style-toggle" onclick="toggleTheme()" id="theme-btn">🎮 Gaming</button>
+
 <header>
-  <span class="leaf">🌿</span>
+  <span class="leaf" id="header-icon">🌿</span>
   <h1>Gloseprøve</h1>
-  <p>Week 21–22 · Nature · Engelsk ↔ Norsk</p>
+  <p id="header-sub">Week 21–22 · Nature · Engelsk ↔ Norsk</p>
 </header>
 
 <div class="mode-tabs">
@@ -423,6 +583,7 @@
 
 <!-- Quiz area -->
 <div id="quiz-area" style="width:100%;max-width:480px;">
+  <div class="xp-badge" id="xp-badge">⚡ XP</div>
   <div class="progress-bar-wrap">
     <div class="progress-bar" id="progress-bar"></div>
   </div>
@@ -723,16 +884,26 @@ function showScore() {
   ss.style.display = 'flex';
 
   const pct = Math.round(score / questions.length * 100);
+  const xp  = score * 50;
   let emoji, title;
-  if (pct === 100) { emoji = '🌟'; title = 'Perfekt!'; }
-  else if (pct >= 80) { emoji = '🎉'; title = 'Veldig bra!'; }
-  else if (pct >= 60) { emoji = '👍'; title = 'Bra jobba!'; }
-  else { emoji = '📚'; title = 'Øv litt mer!'; }
+  if (isGaming) {
+    if (pct === 100) { emoji = '🏆'; title = 'LEGENDARY!'; }
+    else if (pct >= 80) { emoji = '⚔️'; title = 'EPIC WIN!'; }
+    else if (pct >= 60) { emoji = '🛡️'; title = 'GG!'; }
+    else { emoji = '💀'; title = 'Respawn & retry!'; }
+  } else {
+    if (pct === 100) { emoji = '🌟'; title = 'Perfekt!'; }
+    else if (pct >= 80) { emoji = '🎉'; title = 'Veldig bra!'; }
+    else if (pct >= 60) { emoji = '👍'; title = 'Bra jobba!'; }
+    else { emoji = '📚'; title = 'Øv litt mer!'; }
+  }
 
   document.getElementById('score-emoji').textContent = emoji;
   document.getElementById('score-title').textContent = title;
-  document.getElementById('score-sub').textContent = 'Du fikk ' + score + ' av ' + questions.length + ' riktige';
-  document.getElementById('score-big').textContent = pct + '%';
+  document.getElementById('score-sub').textContent = isGaming
+    ? 'Du tjente ' + xp + ' XP · ' + score + ' av ' + questions.length + ' riktige'
+    : 'Du fikk ' + score + ' av ' + questions.length + ' riktige';
+  document.getElementById('score-big').textContent = isGaming ? xp + ' XP' : pct + '%';
 
   if (mistakes.length > 0) {
     const ml = document.getElementById('mistake-list');
@@ -764,6 +935,28 @@ function flipCard() {
 function fcNav(dir) {
   fcIndex = (fcIndex + dir + GLOSSARY.length) % GLOSSARY.length;
   renderFlashcard();
+}
+
+// Theme toggle
+let isGaming = false;
+function toggleTheme() {
+  isGaming = !isGaming;
+  document.body.classList.toggle('gaming', isGaming);
+  const btn = document.getElementById('theme-btn');
+  const icon = document.getElementById('header-icon');
+  const sub  = document.getElementById('header-sub');
+  if (isGaming) {
+    btn.textContent  = '🌿 Nature';
+    icon.textContent = '🎮';
+    sub.textContent  = 'Week 21–22 · Level up your vocab!';
+  } else {
+    btn.textContent  = '🎮 Gaming';
+    icon.textContent = '🌿';
+    sub.textContent  = 'Week 21–22 · Nature · Engelsk ↔ Norsk';
+  }
+  // Re-render score screen labels if visible
+  const ss = document.getElementById('score-screen');
+  if (ss.style.display !== 'none') showScore();
 }
 
 // Init
