@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friends and Foes – Øving</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #fef6e4 0%, #f3d2c1 100%);
+    margin: 0;
+    padding: 16px;
+    min-height: 100vh;
+    color: #2d2d2d;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.3rem;
+    margin: 8px 0 4px;
+    color: #5c3d2e;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #8a6d5b;
+    margin-bottom: 16px;
+  }
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .tab-btn {
+    padding: 10px 18px;
+    border-radius: 20px;
+    border: none;
+    background: #fff;
+    color: #5c3d2e;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .tab-btn.active {
+    background: #e07a5f;
+    color: white;
+  }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* FLASHCARDS */
+  .card-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    perspective: 1000px;
+  }
+  .card {
+    width: 100%;
+    max-width: 320px;
+    height: 190px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+    cursor: pointer;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+  .front { background: #ffffff; color: #5c3d2e; }
+  .back { background: #e07a5f; color: white; transform: rotateY(180deg); }
+  .hint { font-size: 0.75rem; opacity: 0.7; margin-top: 8px; font-weight: 400; }
+
+  .nav-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .nav-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 12px;
+    background: #5c3d2e;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .progress {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #8a6d5b;
+  }
+  .shuffle-btn {
+    display: block;
+    margin: 14px auto 0;
+    background: none;
+    border: 1px solid #8a6d5b;
+    color: #8a6d5b;
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  /* WHEEL */
+  .wheel-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+  }
+  #wheelCanvas {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+  }
+  .pointer {
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 22px solid #5c3d2e;
+    margin-bottom: -4px;
+    z-index: 2;
+  }
+  .spin-btn {
+    margin-top: 16px;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 24px;
+    background: #e07a5f;
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .spin-btn:disabled { opacity: 0.5; }
+
+  .result-box {
+    margin-top: 18px;
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    max-width: 320px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: none;
+  }
+  .result-box.show { display: block; }
+  .result-word {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #5c3d2e;
+    margin-bottom: 10px;
+  }
+  .result-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 2px solid #e5d4c8;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .check-btn {
+    background: #5c3d2e;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .feedback {
+    margin-top: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    min-height: 20px;
+  }
+  .feedback.correct { color: #2a9d5c; }
+  .feedback.wrong { color: #d1495b; }
+</style>
+</head>
+<body>
+
+<h1>Friends and Foes 🦎</h1>
+<div class="subtitle">Glosetrening – uke 35/36</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="cards">Flashcards</button>
+  <button class="tab-btn" data-tab="wheel">Lykkehjul</button>
+</div>
+
+<!-- FLASHCARDS SECTION -->
+<div class="section active" id="cards">
+  <div class="card-wrap">
+    <div class="card" id="flashcard">
+      <div class="face front">
+        <div>
+          <div id="frontText">venner og fiender</div>
+          <div class="hint">Trykk for å snu</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div id="backText">friends and foes</div>
+      </div>
+    </div>
+  </div>
+  <div class="progress" id="progressText">Kort 1 av 7</div>
+  <div class="nav-row">
+    <button class="nav-btn" id="prevBtn">← Forrige</button>
+    <button class="nav-btn" id="nextBtn">Neste →</button>
+  </div>
+  <button class="shuffle-btn" id="shuffleBtn">🔀 Stokk kortene</button>
+</div>
+
+<!-- WHEEL SECTION -->
+<div class="section" id="wheel">
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    <button class="spin-btn" id="spinBtn">SNURR! 🎡</button>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-word" id="resultWord"></div>
+      <div class="hint" style="margin-bottom:12px;">Skriv svaret for hånd, trykk så på knappen</div>
+      <button class="check-btn" id="checkBtn">Vis svar</button>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const words = [
+  { no: "venner og fiender", en: "friends and foes" },
+  { no: "temaer", en: "topics" },
+  { no: "til felles", en: "in common" },
+  { no: "foretrekker", en: "prefer" },
+  { no: "reptilpark", en: "reptile zoo" },
+  { no: "motsatt", en: "opposite" },
+  { no: "bli med", en: "join" }
+];
+
+// TABS
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// FLASHCARDS
+let cardOrder = words.map((_, i) => i);
+let cardIndex = 0;
+const cardEl = document.getElementById('flashcard');
+const frontText = document.getElementById('frontText');
+const backText = document.getElementById('backText');
+const progressText = document.getElementById('progressText');
+
+function renderCard() {
+  const w = words[cardOrder[cardIndex]];
+  frontText.textContent = w.no;
+  backText.textContent = w.en;
+  cardEl.classList.remove('flipped');
+  progressText.textContent = `Kort ${cardIndex + 1} av ${words.length}`;
+}
+
+cardEl.addEventListener('click', () => cardEl.classList.toggle('flipped'));
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  cardIndex = (cardIndex + 1) % words.length;
+  renderCard();
+});
+document.getElementById('prevBtn').addEventListener('click', () => {
+  cardIndex = (cardIndex - 1 + words.length) % words.length;
+  renderCard();
+});
+document.getElementById('shuffleBtn').addEventListener('click', () => {
+  for (let i = cardOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cardOrder[i], cardOrder[j]] = [cardOrder[j], cardOrder[i]];
+  }
+  cardIndex = 0;
+  renderCard();
+});
+renderCard();
+
+// WHEEL
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const numSegments = words.length;
+const segAngle = (2 * Math.PI) / numSegments;
+const colors = ['#e07a5f', '#f2cc8f', '#81b29a', '#3d5a80', '#e56b6f', '#6d597a', '#eab676'];
+let currentRotation = 0;
+let spinning = false;
+let currentWordIndex = null;
+
+function drawWheel(rotation) {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = canvas.width / 2 - 6;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rotation);
+  for (let i = 0; i < numSegments; i++) {
+    const start = i * segAngle;
+    const end = start + segAngle;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, start, end);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.rotate(start + segAngle / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px sans-serif';
+    const label = words[i].no.length > 16 ? words[i].no.slice(0, 14) + '…' : words[i].no;
+    ctx.fillText(label, radius - 10, 4);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // center hub
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, 2 * Math.PI);
+  ctx.fillStyle = '#5c3d2e';
+  ctx.fill();
+}
+
+drawWheel(0);
+
+document.getElementById('spinBtn').addEventListener('click', () => {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('resultBox').classList.remove('show');
+  document.getElementById('feedback').textContent = '';
+
+  const extraSpins = 5 + Math.random() * 3;
+  const randomStop = Math.random() * 2 * Math.PI;
+  const targetRotation = currentRotation + extraSpins * 2 * Math.PI + randomStop;
+
+  const duration = 3200;
+  const startTime = performance.now();
+  const startRotation = currentRotation;
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const rotation = startRotation + (targetRotation - startRotation) * eased;
+    drawWheel(rotation);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      currentRotation = targetRotation % (2 * Math.PI);
+      spinning = false;
+      // Pointer points to top (angle = -PI/2 relative to unrotated wheel).
+      // Determine which segment is under the pointer.
+      const normalized = ((2 * Math.PI - (currentRotation % (2 * Math.PI))) + (Math.PI * 1.5)) % (2 * Math.PI);
+      const idx = Math.floor(normalized / segAngle) % numSegments;
+      currentWordIndex = idx;
+      showResult(idx);
+    }
+  }
+  requestAnimationFrame(animate);
+});
+
+function showResult(idx) {
+  const w = words[idx];
+  document.getElementById('resultWord').textContent = w.no;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('checkBtn').textContent = 'Vis svar';
+  document.getElementById('resultBox').classList.add('show');
+}
+
+document.getElementById('checkBtn').addEventListener('click', revealAnswer);
+
+function revealAnswer() {
+  if (currentWordIndex === null) return;
+  const feedback = document.getElementById('feedback');
+  feedback.textContent = words[currentWordIndex].en;
+  feedback.className = 'feedback correct';
+  document.getElementById('checkBtn').textContent = 'Vist ✓';
+}
+</script>
+</body>
+</html>
