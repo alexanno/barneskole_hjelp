@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Mattehjelp</title>
+<style>
+  :root{
+    --bg:#f7f6f2; --card:#ffffff; --border:#e2e0d8; --text:#22201c; --text-soft:#68655d;
+    --accent:#2f6f5e; --accent-bg:#e3f0ec; --danger:#b23b3b; --danger-bg:#fbe9e9;
+    --success:#2f7d4f; --success-bg:#e7f4ec; --carry:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding:16px 12px 40px;
+  }
+  .app{max-width:480px; margin:0 auto;}
+  h1{font-size:20px; font-weight:600; margin:4px 0 2px;}
+  .sub{font-size:13px; color:var(--text-soft); margin:0 0 16px;}
+  select{
+    width:100%; padding:10px 12px; font-size:15px; border-radius:10px;
+    border:1px solid var(--border); background:var(--card); color:var(--text); margin-bottom:8px;
+    -webkit-appearance:none; appearance:none;
+  }
+  .phase{font-size:13px; font-weight:600; color:var(--accent); min-height:16px; margin:10px 0 6px;}
+  .gridwrap{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:16px 12px; overflow-x:auto; margin-bottom:12px;
+  }
+  .row{display:flex; gap:2px; margin-left:22px;}
+  .cell{
+    height:30px; display:flex; align-items:center; justify-content:center;
+    font-family:"SF Mono",Menlo,Consolas,monospace; font-size:16px; font-weight:600;
+    border-radius:5px;
+  }
+  .carryCell{height:16px; font-size:10px; font-weight:600; color:var(--carry); white-space:nowrap;}
+  .hl{background:var(--accent-bg); color:var(--accent);}
+  .opline{display:flex; align-items:center; gap:2px;}
+  .opsym{width:18px; font-family:monospace; font-weight:600; font-size:16px;}
+  .divider{border-top:2px solid var(--text); margin:3px 0 3px 22px;}
+  .desc{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:12px 14px; font-size:14px; line-height:1.55; margin-bottom:14px; min-height:44px;
+  }
+  .controls{display:flex; align-items:center; gap:8px; margin-bottom:26px;}
+  button{
+    border:1px solid var(--border); background:var(--card); color:var(--text);
+    border-radius:10px; padding:10px 14px; font-size:14px; font-weight:500; cursor:pointer;
+  }
+  button:active{transform:scale(0.97);}
+  .navbtn{flex:1;}
+  .counter{font-size:12px; color:var(--text-soft); min-width:60px; text-align:center;}
+  .section-title{font-weight:600; font-size:15px; margin:0 0 10px; padding-top:14px; border-top:1px solid var(--border);}
+  .practice-item{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;}
+  .practice-row{display:flex; align-items:center; gap:8px;}
+  .practice-row span{font-size:15px;}
+  input[type=text]{
+    width:90px; margin-left:auto; padding:8px 10px; font-size:15px; border-radius:8px;
+    border:1px solid var(--border); text-align:center;
+  }
+  .checkbtn{padding:8px 12px;}
+  .fb{font-size:13px; margin-top:8px; min-height:16px;}
+  .fb.ok{color:var(--success);}
+  .fb.no{color:var(--text-soft);}
+  .fb.empty{color:var(--danger);}
+  footer{text-align:center; font-size:12px; color:var(--text-soft); margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Mattehjelp</h1>
+  <p class="sub">Se hvordan regnestykkene løses steg for steg, og øv selv nederst.</p>
+
+  <select id="catSel">
+    <option value="add">Addisjon (store tall)</option>
+    <option value="sub">Subtraksjon (med låning)</option>
+    <option value="mul1">Multiplikasjon (ett siffer)</option>
+    <option value="mul2">Multiplikasjon (tosifret tall)</option>
+    <option value="dec">Desimaltall (+ og –)</option>
+  </select>
+  <select id="exSel"></select>
+
+  <div class="phase" id="phaseLabel"></div>
+  <div class="gridwrap" id="gridWrap"></div>
+  <div class="desc" id="desc"></div>
+
+  <div class="controls">
+    <button class="navbtn" id="prevBtn">&larr; Forrige</button>
+    <span class="counter" id="stepCounter"></span>
+    <button class="navbtn" id="nextBtn">Neste &rarr;</button>
+  </div>
+
+  <p class="section-title">Prøv selv</p>
+  <div id="practice"></div>
+
+  <footer>Lagre denne siden for å bruke den offline</footer>
+</div>
+
+<script>
+const posInt = ['enerne','tierne','hundrerne','tusenerne','titusenerne'];
+const posDec = ['tidelene','hundredelene','tusendelene'];
+
+function posName(distFromRight, decimalPos){
+  if(distFromRight < decimalPos) return posDec[distFromRight] || 'desimalen';
+  return posInt[distFromRight - decimalPos] || 'sifferet';
+}
+
+function parseNum(s){
+  const parts = s.replace(/\s/g,'').split(',');
+  return {int: parts[0], dec: parts[1] || ''};
+}
+
+function alignNums(aStr, bStr){
+  const a = parseNum(aStr), b = parseNum(bStr);
+  const decLen = Math.max(a.dec.length, b.dec.length);
+  const aDec = a.dec.padEnd(decLen,'0'), bDec = b.dec.padEnd(decLen,'0');
+  const intLen = Math.max(a.int.length, b.int.length);
+  const aInt = a.int.padStart(intLen,'0'), bInt = b.int.padStart(intLen,'0');
+  return { aDigits:(aInt+aDec).split(''), bDigits:(bInt+bDec).split(''), decimalPos: decLen };
+}
+
+function formatWithComma(digitsStr, decimalPos){
+  if(decimalPos===0) return digitsStr;
+  const len = digitsStr.length;
+  if(len<=decimalPos) return '0,' + digitsStr.padStart(decimalPos,'0');
+  return digitsStr.slice(0,len-decimalPos) + ',' + digitsStr.slice(len-decimalPos);
+}
+
+function insertComma(arr, decimalPos){
+  if(decimalPos===0) return arr;
+  const pos = arr.length - decimalPos;
+  const copy = arr.slice();
+  copy.splice(pos, 0, ',');
+  return copy;
+}
+
+function buildFrame(gridA, gridB, gridResult, gridCarry, highlightIdx, desc, op, decimalPos, phaseLabel){
+  return {
+    gridA: insertComma(gridA, decimalPos),
+    gridB: insertComma(gridB, decimalPos),
+    gridResult: insertComma(gridResult, decimalPos),
+    gridCarry: insertComma(gridCarry, decimalPos),
+    highlightIdx: (decimalPos>0 && highlightIdx>=0 && highlightIdx>=gridA.length-decimalPos) ? highlightIdx+1 : highlightIdx,
+    desc, op, phaseLabel
+  };
+}
+
+function genAddFrames(aStr, bStr, phaseLabel){
+  const {aDigits,bDigits,decimalPos} = alignNums(aStr,bStr);
+  const n = aDigits.length;
+  const W = n+1;
+  const aD = ['',...aDigits], bD=['',...bDigits];
+  let result = new Array(W).fill(null);
+  let carry = 0;
+  let frames = [];
+  frames.push(buildFrame(aD,bD,result.slice(),new Array(W).fill(''),-1,
+    `Vi legger sammen fra høyre mot venstre, en kolonne om gangen.`, '+', decimalPos, phaseLabel));
+  for(let i=n-1;i>=0;i--){
+    const a=parseInt(aDigits[i]), b=parseInt(bDigits[i]);
+    const sum=a+b+carry;
+    const digit=sum%10, newCarry=Math.floor(sum/10);
+    result[i+1]=digit;
+    const carryTxt = carry>0 ? ` + mente ${carry}`:'';
+    const desc = `${posName(n-1-i,decimalPos)}: ${a} + ${b}${carryTxt} = ${sum}. Skriv ${digit}` + (newCarry>0?`, husk mente ${newCarry} til neste kolonne.`:'.');
+    const carryRow = new Array(W).fill('');
+    if(newCarry>0 && i>0) carryRow[i]=String(newCarry);
+    frames.push(buildFrame(aD,bD,result.slice(),carryRow,i+1,desc,'+',decimalPos,phaseLabel));
+    carry=newCarry;
+  }
+  if(carry>0){
+    result[0]=carry;
+    frames.push(buildFrame(aD,bD,result.slice(),new Array(W).fill(''),0,
+      `Det er en mente igjen til slutt, så vi skriver ${carry} helt til venstre.`,'+',decimalPos,phaseLabel));
+  }
+  const rawVal = result.filter(x=>x!==null).join('');
+  const value = formatWithComma(rawVal, decimalPos);
+  frames.push(buildFrame(aD,bD,result.slice(),new Array(W).fill(''),-1,
+    `Ferdig! ${aStr} + ${bStr} = ${value}`,'+',decimalPos,phaseLabel));
+  return {frames, value: rawVal};
+}
+
+function genSubFrames(aStr, bStr, phaseLabel){
+  const {aDigits,bDigits,decimalPos} = alignNums(aStr,bStr);
+  const n = aDigits.length;
+  let a = aDigits.map(d=>parseInt(d));
+  const b = bDigits.map(d=>parseInt(d));
+  let result = new Array(n).fill(null);
+  let frames = [];
+  const W = n+1;
+  const bD = ['',...bDigits];
+  frames.push(buildFrame(['',...a.map(String)],bD,new Array(W).fill(null),new Array(W).fill(''),-1,
+    `Vi trekker fra høyre mot venstre. Er tallet vi trekker fra mindre, må vi låne fra kolonnen til venstre.`,'-',decimalPos,phaseLabel));
+  for(let i=n-1;i>=0;i--){
+    let top = a[i];
+    let desc;
+    const borrowRow = new Array(W).fill('');
+    if(top < b[i]){
+      let j=i-1;
+      while(j>=0 && a[j]===0){ a[j]=9; j--; }
+      if(j>=0) a[j]-=1;
+      top+=10;
+      borrowRow[i+1] = '+10';
+      desc = `${posName(n-1-i,decimalPos)}: ${aDigits[i]} er mindre enn ${b[i]}, så vi låner 1 fra kolonnen til venstre (den blir redusert med 1) og legger 10 til her. Nå: ${top} - ${b[i]}`;
+    } else {
+      desc = `${posName(n-1-i,decimalPos)}: ${top} - ${b[i]}`;
+    }
+    const diff = top - b[i];
+    result[i]=diff;
+    desc += ` = ${diff}.`;
+    const resPadded = [null, ...result];
+    frames.push(buildFrame(['',...a.map(String)],bD,resPadded,borrowRow,i+1,desc,'-',decimalPos,phaseLabel));
+  }
+  const finalResult=[null,...result];
+  const rawVal = result.join('');
+  const value = formatWithComma(rawVal, decimalPos);
+  frames.push(buildFrame(['',...a.map(String)],bD,finalResult,new Array(W).fill(''),-1,
+    `Ferdig! ${aStr} - ${bStr} = ${value}`,'-',decimalPos,phaseLabel));
+  return {frames, value: rawVal};
+}
+
+function genMulSingleFrames(topStr, m, phaseLabel, extraNote){
+  const aDigits = topStr.split('');
+  const n = aDigits.length;
+  const W = n+1;
+  const aD=['',...aDigits];
+  const bD = new Array(W).fill(''); bD[W-1]=String(m);
+  let result = new Array(W).fill(null);
+  let carry=0;
+  let frames=[];
+  let introDesc = `Vi ganger hvert siffer i ${topStr} med ${m}, fra høyre mot venstre.`;
+  if(extraNote) introDesc += ' ' + extraNote;
+  frames.push(buildFrame(aD,bD,result.slice(),new Array(W).fill(''),-1,introDesc,'•',0,phaseLabel));
+  for(let i=n-1;i>=0;i--){
+    const a=parseInt(aDigits[i]);
+    const prod=a*m+carry;
+    const digit=prod%10, newCarry=Math.floor(prod/10);
+    result[i+1]=digit;
+    const carryTxt = carry>0?` + mente ${carry}`:'';
+    const desc = `${posName(n-1-i,0)}: ${a} • ${m}${carryTxt} = ${prod}. Skriv ${digit}` + (newCarry>0?`, husk mente ${newCarry}.`:'.');
+    const carryRow=new Array(W).fill('');
+    if(newCarry>0 && i>0) carryRow[i]=String(newCarry);
+    frames.push(buildFrame(aD,bD,result.slice(),carryRow,i+1,desc,'•',0,phaseLabel));
+    carry=newCarry;
+  }
+  if(carry>0){
+    const carryStr=String(carry);
+    if(carryStr.length<=1){ result[0]=carry; }
+    else { result.splice(0,1,...carryStr.split('').map(Number)); }
+    frames.push(buildFrame(aD,bD,result.slice(),new Array(result.length).fill(''),0,
+      `Siste mente ${carry} skrives foran svaret.`,'•',0,phaseLabel));
+  }
+  const value = result.filter(x=>x!==null).join('');
+  frames.push(buildFrame(aD,bD,result.slice(),new Array(result.length).fill(''),-1,
+    `Ferdig med denne delen: ${topStr} • ${m} = ${value}`,'•',0,phaseLabel));
+  return {frames, value};
+}
+
+function genMulTwoFrames(topStr, bottomStr){
+  const tens = parseInt(bottomStr[0]), ones = parseInt(bottomStr[1]);
+  const p1 = genMulSingleFrames(topStr, ones, `Fase 1 av 3: gang med enerne (${ones})`);
+  const p2 = genMulSingleFrames(topStr, tens, `Fase 2 av 3: gang med tierne (${tens})`,
+    `Siden ${tens} egentlig betyr ${tens}0, skal svaret vi får skyves ett hakk til venstre (som å legge til en 0 bakerst).`);
+  const partial1 = p1.value;
+  const partial2shifted = p2.value + '0';
+  const p3 = genAddFrames(partial1, partial2shifted, `Fase 3 av 3: legg sammen delresultatene`);
+  const noteFrame = buildFrame(['',...String(partial1).split('')],['',...String(partial2shifted).split('')],
+    new Array(Math.max(partial1.length,partial2shifted.length)+1).fill(null), new Array(Math.max(partial1.length,partial2shifted.length)+1).fill(''), -1,
+    `Delresultat 1 (• ${ones}): ${partial1}. Delresultat 2 (• ${tens}, forskjøvet): ${partial2shifted}. Nå legger vi dem sammen.`,'+',0,`Fase 3 av 3: legg sammen delresultatene`);
+  const allFrames = [...p1.frames, ...p2.frames, noteFrame, ...p3.frames];
+  allFrames.push(buildFrame([],[],[],[],-1,
+    `Ferdig! ${topStr} • ${bottomStr} = ${p3.value}`,'•',0,'Ferdig'));
+  return allFrames;
+}
+
+const examples = {
+  add: [
+    {label:'357 + 87', gen:()=>genAddFrames('357','87')},
+    {label:'348 + 867', gen:()=>genAddFrames('348','867')}
+  ],
+  sub: [
+    {label:'543 – 268', gen:()=>genSubFrames('543','268')}
+  ],
+  mul1: [
+    {label:'486 • 7', gen:()=>genMulSingleFrames('486',7)},
+    {label:'589 • 9', gen:()=>genMulSingleFrames('589',9)}
+  ],
+  mul2: [
+    {label:'486 • 74', gen:()=>({frames:genMulTwoFrames('486','74')})},
+    {label:'589 • 92', gen:()=>({frames:genMulTwoFrames('589','92')})}
+  ],
+  dec: [
+    {label:'35,57 + 8,67', gen:()=>genAddFrames('35,57','8,67')},
+    {label:'54,83 – 2,468', gen:()=>genSubFrames('54,83','2,468')}
+  ]
+};
+
+const practiceData = {
+  add: [{q:'348 + 867', a:1215}],
+  sub: [{q:'800 – 342', a:458}],
+  mul1: [{q:'589 • 9', a:5301}],
+  mul2: [{q:'589 • 92', a:54188}],
+  dec: [{q:'34,8 + 8,67', a:43.47}]
+};
+
+let currentFrames = [];
+let currentIdx = 0;
+
+function renderGrid(frame){
+  const wrap = document.getElementById('gridWrap');
+  if(!frame.gridA || frame.gridA.length===0){ wrap.innerHTML=''; return; }
+  const cols = frame.gridA.length;
+  const cellW = cols>7 ? 22 : 28;
+
+  function cell(v, isHighlight, isComma){
+    const cls = 'cell' + (isHighlight ? ' hl' : '');
+    return `<div class="${cls}" style="width:${isComma?10:cellW}px;">${v===null?'':v}</div>`;
+  }
+  function carryCell(v, isComma){
+    return `<div class="cell carryCell" style="width:${isComma?10:cellW}px;">${v===null?'':v}</div>`;
+  }
+  function row(arr, highlightIdx, isCarry){
+    return arr.map((v,i)=>{
+      const isComma = v===',';
+      if(isCarry) return carryCell(v, isComma);
+      return cell(v, highlightIdx===i, isComma);
+    }).join('');
+  }
+
+  const carryHTML = `<div class="row">${row(frame.gridCarry, -1, true)}</div>`;
+  const topHTML = `<div class="row">${row(frame.gridA, frame.highlightIdx, false)}</div>`;
+  const botHTML = `<div class="opline"><div class="opsym">${frame.op||''}</div>${row(frame.gridB, frame.highlightIdx, false)}</div>`;
+  const lineHTML = `<div class="divider" style="width:${cols*(cellW+2)}px;"></div>`;
+  const resHTML = `<div class="row">${row(frame.gridResult, -1, false)}</div>`;
+  wrap.innerHTML = carryHTML + topHTML + botHTML + lineHTML + resHTML;
+}
+
+function renderFrame(){
+  const f = currentFrames[currentIdx];
+  document.getElementById('phaseLabel').textContent = f.phaseLabel || '';
+  renderGrid(f);
+  document.getElementById('desc').textContent = f.desc;
+  document.getElementById('stepCounter').textContent = `${currentIdx+1} / ${currentFrames.length}`;
+  document.getElementById('prevBtn').style.visibility = currentIdx===0 ? 'hidden' : 'visible';
+  document.getElementById('nextBtn').style.visibility = currentIdx===currentFrames.length-1 ? 'hidden' : 'visible';
+}
+
+function loadExample(){
+  const cat = document.getElementById('catSel').value;
+  const idx = parseInt(document.getElementById('exSel').value);
+  const ex = examples[cat][idx];
+  const result = ex.gen();
+  currentFrames = result.frames;
+  currentIdx = 0;
+  renderFrame();
+  renderPractice(cat);
+}
+
+function populateExamples(){
+  const cat = document.getElementById('catSel').value;
+  const sel = document.getElementById('exSel');
+  sel.innerHTML = examples[cat].map((e,i)=>`<option value="${i}">${e.label}</option>`).join('');
+  loadExample();
+}
+
+function renderPractice(cat){
+  const el = document.getElementById('practice');
+  el.innerHTML='';
+  practiceData[cat].forEach((item,i)=>{
+    const row = document.createElement('div');
+    row.className = 'practice-item';
+    row.innerHTML = `
+      <div class="practice-row">
+        <span>${item.q} =</span>
+        <input type="text" inputmode="decimal" placeholder="Svar" id="p-in-${i}"/>
+        <button class="checkbtn" id="p-chk-${i}">Sjekk</button>
+      </div>
+      <div class="fb" id="p-fb-${i}"></div>
+    `;
+    el.appendChild(row);
+    document.getElementById(`p-chk-${i}`).addEventListener('click', ()=>{
+      const inp = document.getElementById(`p-in-${i}`);
+      const fb = document.getElementById(`p-fb-${i}`);
+      const raw = inp.value.trim().replace(',', '.');
+      if(raw===''){ fb.className='fb empty'; fb.textContent='Skriv inn et svar først'; return; }
+      const val = parseFloat(raw);
+      if(Math.abs(val-item.a)<0.001){ fb.className='fb ok'; fb.textContent='Riktig! Godt jobbet.'; }
+      else { fb.className='fb no'; fb.textContent='Ikke helt riktig ennå — prøv å bruke metoden steg for steg over.'; }
+    });
+  });
+}
+
+document.getElementById('catSel').addEventListener('change', populateExamples);
+document.getElementById('exSel').addEventListener('change', loadExample);
+document.getElementById('prevBtn').addEventListener('click', ()=>{ if(currentIdx>0){ currentIdx--; renderFrame(); }});
+document.getElementById('nextBtn').addEventListener('click', ()=>{ if(currentIdx<currentFrames.length-1){ currentIdx++; renderFrame(); }});
+
+populateExamples();
+</script>
+</body>
+</html>
