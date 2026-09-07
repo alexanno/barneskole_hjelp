@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#f7f6f2; --card:#ffffff; --border:#e2e0d8; --text:#22201c; --text-soft:#68655d;
-    --accent:#2f6f5e; --accent-bg:#e3f0ec; --danger:#b23b3b; --danger-bg:#fbe9e9;
+    --accent:#2f6f5e; --step:#1f5c8a; --step-bg:#e4eefa; --danger:#b23b3b; --danger-bg:#fbe9e9;
     --success:#2f7d4f; --success-bg:#e7f4ec; --carry:#c0392b;
   }
   *{box-sizing:border-box;}
@@ -35,7 +35,7 @@
     border-radius:5px;
   }
   .carryCell{height:16px; font-size:10px; font-weight:600; color:var(--carry); white-space:nowrap;}
-  .hl{background:var(--accent-bg); color:var(--accent);}
+  .hl{background:var(--step-bg); color:var(--step);}
   .opline{display:flex; align-items:center; gap:2px;}
   .opsym{width:18px; font-family:monospace; font-weight:600; font-size:16px;}
   .divider{border-top:2px solid var(--text); margin:3px 0 3px 22px;}
@@ -94,7 +94,6 @@
   <p class="section-title">Prøv selv</p>
   <div id="practice"></div>
 
-  <footer>Lagre denne siden for å bruke den offline</footer>
 </div>
 
 <script>
@@ -135,13 +134,19 @@ function insertComma(arr, decimalPos){
   return copy;
 }
 
-function buildFrame(gridA, gridB, gridResult, gridCarry, highlightIdx, desc, op, decimalPos, phaseLabel){
+function adjustHighlight(idx, rawLen, decimalPos){
+  return (decimalPos>0 && idx>=0 && idx>=rawLen-decimalPos) ? idx+1 : idx;
+}
+
+function buildFrame(gridA, gridB, gridResult, gridCarry, highlightIdx, desc, op, decimalPos, phaseLabel, highlightBIdx){
+  const hB = highlightBIdx===undefined ? highlightIdx : highlightBIdx;
   return {
     gridA: insertComma(gridA, decimalPos),
     gridB: insertComma(gridB, decimalPos),
     gridResult: insertComma(gridResult, decimalPos),
     gridCarry: insertComma(gridCarry, decimalPos),
-    highlightIdx: (decimalPos>0 && highlightIdx>=0 && highlightIdx>=gridA.length-decimalPos) ? highlightIdx+1 : highlightIdx,
+    highlightIdx: adjustHighlight(highlightIdx, gridA.length, decimalPos),
+    highlightB: adjustHighlight(hB, gridA.length, decimalPos),
     desc, op, phaseLabel
   };
 }
@@ -240,7 +245,7 @@ function genMulSingleFrames(topStr, m, phaseLabel, extraNote){
     const desc = `${posName(n-1-i,0)}: ${a} • ${m}${carryTxt} = ${prod}. Skriv ${digit}` + (newCarry>0?`, husk mente ${newCarry}.`:'.');
     const carryRow=new Array(W).fill('');
     if(newCarry>0 && i>0) carryRow[i]=String(newCarry);
-    frames.push(buildFrame(aD,bD,result.slice(),carryRow,i+1,desc,'•',0,phaseLabel));
+    frames.push(buildFrame(aD,bD,result.slice(),carryRow,i+1,desc,'•',0,phaseLabel,W-1));
     carry=newCarry;
   }
   if(carry>0){
@@ -248,11 +253,11 @@ function genMulSingleFrames(topStr, m, phaseLabel, extraNote){
     if(carryStr.length<=1){ result[0]=carry; }
     else { result.splice(0,1,...carryStr.split('').map(Number)); }
     frames.push(buildFrame(aD,bD,result.slice(),new Array(result.length).fill(''),0,
-      `Siste mente ${carry} skrives foran svaret.`,'•',0,phaseLabel));
+      `Siste mente ${carry} skrives foran svaret.`,'•',0,phaseLabel,-1));
   }
   const value = result.filter(x=>x!==null).join('');
   frames.push(buildFrame(aD,bD,result.slice(),new Array(result.length).fill(''),-1,
-    `Ferdig med denne delen: ${topStr} • ${m} = ${value}`,'•',0,phaseLabel));
+    `Ferdig med denne delen: ${topStr} • ${m} = ${value}`,'•',0,phaseLabel,-1));
   return {frames, value};
 }
 
@@ -329,7 +334,7 @@ function renderGrid(frame){
 
   const carryHTML = `<div class="row">${row(frame.gridCarry, -1, true)}</div>`;
   const topHTML = `<div class="row">${row(frame.gridA, frame.highlightIdx, false)}</div>`;
-  const botHTML = `<div class="opline"><div class="opsym">${frame.op||''}</div>${row(frame.gridB, frame.highlightIdx, false)}</div>`;
+  const botHTML = `<div class="opline"><div class="opsym">${frame.op||''}</div>${row(frame.gridB, frame.highlightB, false)}</div>`;
   const lineHTML = `<div class="divider" style="width:${cols*(cellW+2)}px;"></div>`;
   const resHTML = `<div class="row">${row(frame.gridResult, -1, false)}</div>`;
   wrap.innerHTML = carryHTML + topHTML + botHTML + lineHTML + resHTML;
