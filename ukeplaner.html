@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ukeplaner</title>
+<style>
+  :root{
+    --bg:#f7f6f2; --card:#ffffff; --border:#e2e0d8; --text:#22201c; --text-soft:#68655d;
+    --accent:#2c5f8a; --accent-bg:#e4eefa; --ok:#2f7d4f; --ok-bg:#e7f4ec;
+    --warn:#a06a1a; --warn-bg:#fbf1e0; --err:#b23b3b; --err-bg:#fbe9e9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding:16px 12px 40px;
+  }
+  .app{max-width:720px; margin:0 auto;}
+  h1{font-size:22px; font-weight:600; margin:4px 0 2px;}
+  .sub{font-size:13px; color:var(--text-soft); margin:0 0 18px; line-height:1.5;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:16px;
+  }
+  .card h2{margin:0 0 8px; font-size:18px;}
+  .meta{font-size:12px; color:var(--text-soft); margin-bottom:12px;}
+  .badge{
+    display:inline-block; font-size:11px; font-weight:600; padding:2px 8px;
+    border-radius:999px; margin-left:6px; vertical-align:middle;
+  }
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.err{background:var(--err-bg); color:var(--err);}
+  .row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;}
+  a.btn, button.btn{
+    display:inline-block; text-decoration:none; border:1px solid var(--border);
+    background:var(--accent-bg); color:var(--accent); font-weight:600; font-size:13px;
+    padding:9px 14px; border-radius:10px; cursor:pointer;
+  }
+  a.btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  button.btn.ghost{background:var(--card); color:var(--text-soft);}
+  button.btn.ghost.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .viewer{
+    border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    background:#f0f0ee; min-height:70vh;
+  }
+  .viewer iframe, .viewer embed{width:100%; height:70vh; border:0; display:block;}
+  .fallback-note{font-size:12px; color:var(--text-soft); margin-top:8px; line-height:1.5;}
+  .live-status{font-size:12px; margin-top:8px; line-height:1.6; white-space:pre-wrap;}
+  .live-status .ok{color:var(--ok);}
+  .live-status .err{color:var(--err);}
+  details{margin-top:10px;}
+  summary{font-size:12px; color:var(--text-soft); cursor:pointer;}
+  footer{text-align:center; font-size:12px; color:var(--text-soft); margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Ukeplaner</h1>
+  <p class="sub">
+    Direktelenker til nyeste ukeplan (PDF) per trinn. Lenken hentes automatisk av en
+    GitHub Action fra minskole.no og oppdateres i løpet av dagen, slik at den er klar
+    med en gang du åpner siden – uten å måtte lete etter den selv.
+  </p>
+
+  <div id="cards"></div>
+
+  <footer>
+    Oppdateres automatisk av <code>.github/workflows/oppdater_ukeplaner.yml</code>.
+    Kildekode: <code>scripts/oppdater_ukeplaner.py</code>.
+  </footer>
+</div>
+
+<script>
+// ---- Konfigurasjon --------------------------------------------------------
+// Rekkefølge/filter på hvilke trinn som vises. La stå tom ([]) for å vise
+// alle trinn som finnes i data/ukeplaner.json (dvs. alt scripts/oppdater_ukeplaner.py
+// er satt opp til å hente). Fyll inn f.eks. ["2. trinn", "6. trinn"] for å
+// begrense/sortere utvalget uavhengig av rekkefølgen i JSON-fila.
+const VIS_TRINN = ["2. trinn", "6. trinn"];
+
+const DATA_URL = "data/ukeplaner.json";
+const MINSKOLE_BASE = "https://www.minskole.no";
+// Samme XPath som scripts/oppdater_ukeplaner.py (og det opprinnelige Python-scriptet)
+// bruker for å finne selve ukeplan-lenken i HTML-en fra minskole.no.
+const XPATH_UKEPLAN = "(//*[contains(text(), 'Ukeplan')]/following::a[contains(@href, 'Documents')])[1]";
+
+// Offentlige CORS-proxyer å prøve, i rekkefølge, hvis direkte fetch fra
+// nettleseren blir blokkert av CORS (se forklaring i "Prøv å hente live").
+const CORS_PROXIES = [
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+];
+
+// ---- Rendering --------------------------------------------------------
+
+function formatTid(iso){
+  if(!iso) return "aldri";
+  try{
+    return new Date(iso).toLocaleString("no-NO", {dateStyle:"short", timeStyle:"short"});
+  }catch(e){ return iso; }
+}
+
+function statusBadge(info){
+  if(info.status === "ok") return `<span class="badge ok">oppdatert</span>`;
+  if(info.status === "feilet_beholder_forrige") return `<span class="badge warn">siste sjekk feilet – viser forrige lenke</span>`;
+  if(info.status === "ingen_funnet") return `<span class="badge err">fant ingen lenke</span>`;
+  return `<span class="badge warn">ikke kjørt ennå</span>`;
+}
+
+function viewerHTML(trinnId, pdfUrl){
+  if(!pdfUrl) return `<div class="viewer" id="viewer-${trinnId}"><p style="padding:16px;color:var(--text-soft);font-size:13px;">Ingen PDF-lenke tilgjengelig ennå.</p></div>`;
+  return `<div class="viewer" id="viewer-${trinnId}">
+    <iframe src="${pdfUrl}" title="Ukeplan"></iframe>
+  </div>`;
+}
+
+function setViewerMode(trinnId, mode, pdfUrl){
+  const el = document.getElementById(`viewer-${trinnId}`);
+  if(!el || !pdfUrl) return;
+  document.querySelectorAll(`.mode-btn-${cssEsc(trinnId)}`).forEach(b => b.classList.remove("active"));
+  document.getElementById(`mode-${trinnId}-${mode}`)?.classList.add("active");
+
+  if(mode === "iframe"){
+    el.innerHTML = `<iframe src="${pdfUrl}" title="Ukeplan"></iframe>`;
+  } else if(mode === "google"){
+    const gUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    el.innerHTML = `<iframe src="${gUrl}" title="Ukeplan (Google-visning)"></iframe>`;
+  } else if(mode === "embed"){
+    el.innerHTML = `<embed src="${pdfUrl}" type="application/pdf" />`;
+  }
+}
+
+function cssEsc(s){ return s.replace(/[^a-zA-Z0-9_-]/g, "_"); }
+
+function renderCard(trinnNavn, info){
+  const id = cssEsc(trinnNavn);
+  const pdfUrl = info.pdf_url;
+  return `
+  <div class="card">
+    <h2>${trinnNavn} ${statusBadge(info)}</h2>
+    <div class="meta">
+      Sist sjekket: ${formatTid(info.sist_sjekket)} · Lenke sist bekreftet: ${formatTid(info.sist_funnet)}
+    </div>
+    <div class="row">
+      <a class="btn primary" id="open-${id}" href="${pdfUrl || "#"}" target="_blank" rel="noopener" ${pdfUrl ? "" : "style=\"display:none\""}>Åpne PDF i ny fane</a>
+      <a class="btn" href="${info.kilde_side}" target="_blank" rel="noopener">Åpne trinn-siden på minskole.no</a>
+      <button class="btn ghost" onclick="proevLiveHenting('${id}')">Prøv å hente live (eksperimentelt)</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost mode-btn-${id} active" id="mode-${id}-iframe" onclick="setViewerMode('${id}','iframe', currentPdf['${id}'])">Vis i siden (iframe)</button>
+      <button class="btn ghost mode-btn-${id}" id="mode-${id}-embed" onclick="setViewerMode('${id}','embed', currentPdf['${id}'])">Vis i siden (embed)</button>
+      <button class="btn ghost mode-btn-${id}" id="mode-${id}-google" onclick="setViewerMode('${id}','google', currentPdf['${id}'])">Google-visning</button>
+    </div>
+    ${viewerHTML(id, pdfUrl)}
+    <p class="fallback-note">
+      Visning direkte på siden avhenger av at minskole.no tillater innramming (embedding).
+      Hvis viseren over er tom eller viser en feilmelding, bruk «Åpne PDF i ny fane» i stedet –
+      den fungerer alltid siden den bare åpner den originale lenken.
+    </p>
+    <div class="live-status" id="live-${id}"></div>
+  </div>`;
+}
+
+let currentPdf = {};
+let currentInfo = {};
+
+async function last(){
+  const cardsEl = document.getElementById("cards");
+  try{
+    const res = await fetch(`${DATA_URL}?t=${Date.now()}`, {cache: "no-store"});
+    const data = await res.json();
+    const trinnData = data.trinn || {};
+    const rekkefolge = VIS_TRINN.length ? VIS_TRINN : Object.keys(trinnData);
+
+    cardsEl.innerHTML = rekkefolge
+      .filter(t => trinnData[t])
+      .map(t => {
+        const id = cssEsc(t);
+        currentPdf[id] = trinnData[t].pdf_url;
+        currentInfo[id] = trinnData[t];
+        return renderCard(t, trinnData[t]);
+      })
+      .join("");
+  }catch(e){
+    cardsEl.innerHTML = `<div class="card"><p style="color:var(--err)">Klarte ikke å laste data/ukeplaner.json: ${e}</p></div>`;
+  }
+}
+
+// ---- Eksperimentell live-henting rett fra nettleseren ---------------------
+//
+// Dette forsøker å gjøre akkurat det samme som scripts/oppdater_ukeplaner.py,
+// men kjørt direkte i DIN nettleser i stedet for i en GitHub Action.
+// Det vil mest sannsynlig IKKE fungere med et vanlig fetch()-kall, fordi
+// minskole.no (som de aller fleste nettsteder) ikke sender CORS-headere som
+// tillater at sider på et annet domene (som denne) leser svaret. Det er en
+// sikkerhetsbegrensning i nettleseren, ikke en feil. Vi prøver derfor:
+//   1. Direkte fetch (fungerer bare hvis minskole.no eksplisitt tillater CORS)
+//   2. Et par offentlige CORS-proxyer som mellomledd (kan være trege/nede)
+// Lykkes ingen av delene, er den daglige GitHub Action-jobben (som kjører på
+// GitHub sine servere og ikke er begrenset av nettleser-CORS) den pålitelige
+// kilden – resultatet vises i kortet over uansett.
+async function proevLiveHenting(id){
+  const statusEl = document.getElementById(`live-${id}`);
+  const kildeSide = currentInfo[id]?.kilde_side;
+  if(!kildeSide){ statusEl.textContent = "Fant ikke kilde-URL."; return; }
+
+  const logg = [];
+  const skriv = (linje) => { logg.push(linje); statusEl.textContent = logg.join("\n"); };
+
+  skriv(`Prøver direkte fetch mot ${kildeSide} ...`);
+  let html = await forsoekDirekteFetch(kildeSide, skriv);
+
+  if(!html){
+    for(const lagProxy of CORS_PROXIES){
+      const proxyUrl = lagProxy(kildeSide);
+      skriv(`Prøver via CORS-proxy: ${new URL(proxyUrl).hostname} ...`);
+      html = await forsoekProxyFetch(proxyUrl, skriv);
+      if(html) break;
+    }
+  }
+
+  if(!html){
+    skriv("Klarte ikke å hente siden fra nettleseren (som forventet pga. CORS). Bruker cached lenke fra GitHub Action i stedet.");
+    return;
+  }
+
+  const lenke = finnUkeplanLenke(html);
+  if(lenke){
+    skriv(`Fant lenke live: ${lenke}`);
+    currentPdf[id] = lenke;
+    setViewerMode(id, "iframe", lenke);
+    const openBtn = document.getElementById(`open-${id}`);
+    if(openBtn){ openBtn.href = lenke; openBtn.style.display = ""; }
+  } else {
+    skriv("Siden ble hentet, men fant ingen lenke som matchet mønsteret (strukturen kan ha endret seg).");
+  }
+}
+
+async function forsoekDirekteFetch(url, skriv){
+  try{
+    const res = await fetch(url, {mode: "cors"});
+    if(!res.ok){ skriv(`Direkte fetch feilet: HTTP ${res.status}`); return null; }
+    return await res.text();
+  }catch(e){
+    skriv(`Direkte fetch blokkert/feilet: ${e.message}`);
+    return null;
+  }
+}
+
+async function forsoekProxyFetch(proxyUrl, skriv){
+  try{
+    const res = await fetch(proxyUrl);
+    if(!res.ok){ skriv(`Proxy feilet: HTTP ${res.status}`); return null; }
+    return await res.text();
+  }catch(e){
+    skriv(`Proxy feilet: ${e.message}`);
+    return null;
+  }
+}
+
+function finnUkeplanLenke(htmlText){
+  const doc = new DOMParser().parseFromString(htmlText, "text/html");
+  const resultat = document.evaluate(
+    XPATH_UKEPLAN, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+  );
+  const el = resultat.singleNodeValue;
+  if(!el) return null;
+  const href = el.getAttribute("href");
+  if(!href) return null;
+  try{
+    return new URL(href, MINSKOLE_BASE).href;
+  }catch(e){
+    return null;
+  }
+}
+
+last();
+</script>
+</body>
+</html>
