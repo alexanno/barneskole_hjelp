@@ -36,6 +36,9 @@
   }
   .carryCell{height:16px; font-size:10px; font-weight:600; color:var(--carry); white-space:nowrap;}
   .hl{background:var(--step-bg); color:var(--step);}
+  .hlr{background:var(--success-bg); color:var(--success);}
+  .zero{color:#7b4fb8; background:#f0e9fa;}
+  .rowlabel{align-self:center; margin-left:8px; font-size:11px; color:var(--text-soft); white-space:nowrap;}
   .opline{display:flex; align-items:center; gap:2px;}
   .opsym{width:18px; font-family:monospace; font-weight:600; font-size:16px;}
   .divider{border-top:2px solid var(--text); margin:3px 0 3px 22px;}
@@ -169,7 +172,7 @@ function genAddFrames(aStr, bStr, phaseLabel){
     const carryTxt = carry>0 ? ` + mente ${carry}`:'';
     const desc = `${posName(n-1-i,decimalPos)}: ${a} + ${b}${carryTxt} = ${sum}. Skriv ${digit}` + (newCarry>0?`, husk mente ${newCarry} til neste kolonne.`:'.');
     const carryRow = new Array(W).fill('');
-    if(newCarry>0 && i>0) carryRow[i]=String(newCarry);
+    if(newCarry>0) carryRow[i]=String(newCarry);
     frames.push(buildFrame(aD,bD,result.slice(),carryRow,i+1,desc,'+',decimalPos,phaseLabel));
     carry=newCarry;
   }
@@ -244,7 +247,7 @@ function genMulSingleFrames(topStr, m, phaseLabel, extraNote){
     const carryTxt = carry>0?` + mente ${carry}`:'';
     const desc = `${posName(n-1-i,0)}: ${a} • ${m}${carryTxt} = ${prod}. Skriv ${digit}` + (newCarry>0?`, husk mente ${newCarry}.`:'.');
     const carryRow=new Array(W).fill('');
-    if(newCarry>0 && i>0) carryRow[i]=String(newCarry);
+    if(newCarry>0) carryRow[i]=String(newCarry);
     frames.push(buildFrame(aD,bD,result.slice(),carryRow,i+1,desc,'•',0,phaseLabel,W-1));
     carry=newCarry;
   }
@@ -263,19 +266,86 @@ function genMulSingleFrames(topStr, m, phaseLabel, extraNote){
 
 function genMulTwoFrames(topStr, bottomStr){
   const tens = parseInt(bottomStr[0]), ones = parseInt(bottomStr[1]);
-  const p1 = genMulSingleFrames(topStr, ones, `Fase 1 av 3: gang med enerne (${ones})`);
-  const p2 = genMulSingleFrames(topStr, tens, `Fase 2 av 3: gang med tierne (${tens})`,
-    `Siden ${tens} egentlig betyr ${tens}0, skal svaret vi får skyves ett hakk til venstre (som å legge til en 0 bakerst).`);
-  const partial1 = p1.value;
-  const partial2shifted = p2.value + '0';
-  const p3 = genAddFrames(partial1, partial2shifted, `Fase 3 av 3: legg sammen delresultatene`);
-  const noteFrame = buildFrame(['',...String(partial1).split('')],['',...String(partial2shifted).split('')],
-    new Array(Math.max(partial1.length,partial2shifted.length)+1).fill(null), new Array(Math.max(partial1.length,partial2shifted.length)+1).fill(''), -1,
-    `Delresultat 1 (• ${ones}): ${partial1}. Delresultat 2 (• ${tens}, forskjøvet): ${partial2shifted}. Nå legger vi dem sammen.`,'+',0,`Fase 3 av 3: legg sammen delresultatene`);
-  const allFrames = [...p1.frames, ...p2.frames, noteFrame, ...p3.frames];
-  allFrames.push(buildFrame([],[],[],[],-1,
-    `Ferdig! ${topStr} • ${bottomStr} = ${p3.value}`,'•',0,'Ferdig'));
-  return allFrames;
+  const tD = topStr.split('').map(Number);
+  const n = tD.length, C = n+2;
+  const blank = ()=>new Array(C).fill('');
+  const s = {carry:blank(), top:blank(), bot:blank(), p1:blank(), p2:blank(), csum:blank(), sum:blank(), lab1:'', lab2:''};
+  tD.forEach((d,k)=>{ s.top[C-n+k]=d; });
+  s.bot[C-2]=tens; s.bot[C-1]=ones;
+  const frames=[];
+  const push=(desc, phaseLabel, hl)=>frames.push({
+    rows:{carry:s.carry.slice(), top:s.top.slice(), bot:s.bot.slice(), p1:s.p1.slice(), p2:s.p2.slice(), csum:s.csum.slice(), sum:s.sum.slice()},
+    lab1:s.lab1, lab2:s.lab2, hl:hl||{}, desc, phaseLabel
+  });
+  const ph1=`Fase 1 av 3: gang med enerne (${ones})`;
+  const ph2=`Fase 2 av 3: gang med tierne (${tens} betyr ${tens*10})`;
+  const ph3='Fase 3 av 3: legg sammen delresultatene';
+
+  push(`${bottomStr} er ${tens} tiere og ${ones} enere, altså ${tens*10} + ${ones}. Vi regner derfor to små gangestykker, ${topStr} • ${ones} og ${topStr} • ${tens*10}, og legger svarene sammen til slutt.`,
+    'Plan', {bot:[C-2,C-1]});
+
+  // Fase 1
+  s.lab1=`${topStr} • ${ones}`;
+  let carry=0;
+  for(let i=n-1;i>=0;i--){
+    const col=C-n+i, a=tD[i], prod=a*ones+carry, digit=prod%10, nc=Math.floor(prod/10);
+    s.p1[col]=digit; s.carry=blank(); if(nc>0) s.carry[col-1]=nc;
+    const ct=carry>0?` + mente ${carry}`:'';
+    push(`${posName(n-1-i,0)}: ${a} • ${ones}${ct} = ${prod}. Skriv ${digit}`+(nc>0?`, og husk mente ${nc} (den står i rødt over neste siffer).`:'.'),
+      ph1,{top:[col],bot:[C-1],p1:[col]});
+    carry=nc;
+  }
+  if(carry>0){
+    s.p1[C-n-1]=carry; s.carry=blank();
+    push(`Siste mente ${carry} skrives helt foran svaret.`,ph1,{p1:[C-n-1]});
+  }
+  s.carry=blank();
+  const v1=parseInt(s.p1.join('')||'0');
+  push(`Delresultat 1: ${topStr} • ${ones} = ${v1}.`,ph1,{});
+
+  // Fase 2
+  s.lab2=`${topStr} • ${tens*10}`;
+  s.p2[C-1]=0;
+  push(`Nå er det tierne. ${tens} står på tierplassen og betyr ${tens*10}. Derfor skriver vi først en 0 på enerplassen i rad 2 (den lilla nullen). Resten av svaret skyves da ett hakk til venstre.`,
+    ph2,{bot:[C-2],p2:[C-1]});
+  carry=0;
+  for(let i=n-1;i>=0;i--){
+    const col=C-n+i, a=tD[i], prod=a*tens+carry, digit=prod%10, nc=Math.floor(prod/10);
+    s.p2[col-1]=digit; s.carry=blank(); if(nc>0) s.carry[col-1]=nc;
+    const ct=carry>0?` + mente ${carry}`:'';
+    push(`${posName(n-1-i,0)}: ${a} • ${tens}${ct} = ${prod}. Skriv ${digit}`+(nc>0?`, og husk mente ${nc} (den står i rødt over neste siffer).`:'.'),
+      ph2,{top:[col],bot:[C-2],p2:[col-1]});
+    carry=nc;
+  }
+  if(carry>0){
+    s.p2[C-n-2]=carry; s.carry=blank();
+    push(`Siste mente ${carry} skrives helt foran svaret.`,ph2,{p2:[C-n-2]});
+  }
+  s.carry=blank();
+  const v2=parseInt(s.p2.join('')||'0');
+  push(`Delresultat 2: ${topStr} • ${tens*10} = ${v2}.`,ph2,{});
+
+  // Fase 3
+  const first=Math.min(...s.p1.map((v,i)=>v===''?C:i), ...s.p2.map((v,i)=>v===''?C:i));
+  push(`Til slutt legger vi sammen de to delresultatene: ${v1} + ${v2}. Vi starter til høyre, som vanlig.`,ph3,{p1:[C-1],p2:[C-1]});
+  carry=0;
+  for(let col=C-1;col>=first;col--){
+    const a=s.p1[col]===''?0:s.p1[col], b=s.p2[col]===''?0:s.p2[col];
+    const sum=a+b+carry, digit=sum%10, nc=Math.floor(sum/10);
+    s.sum[col]=digit; s.csum=blank(); if(nc>0 && col>0) s.csum[col-1]=nc;
+    const ct=carry>0?` + mente ${carry}`:'';
+    push(`${posName(C-1-col,0)}: ${a} + ${b}${ct} = ${sum}. Skriv ${digit}`+(nc>0?`, og husk mente ${nc}.`:'.'),
+      ph3,{p1:[col],p2:[col],sum:[col]});
+    carry=nc;
+  }
+  if(carry>0){
+    s.sum[first-1]=carry; s.csum=blank();
+    push(`Siste mente ${carry} skrives helt foran svaret.`,ph3,{sum:[first-1]});
+  }
+  s.csum=blank();
+  const total=s.sum.join('');
+  push(`Ferdig! ${topStr} • ${bottomStr} = ${total}`,'Ferdig',{});
+  return frames;
 }
 
 const examples = {
@@ -311,8 +381,29 @@ const practiceData = {
 let currentFrames = [];
 let currentIdx = 0;
 
+function renderMul2(frame, wrap){
+  const r=frame.rows, C=r.top.length, cellW=C>7?22:30, hl=frame.hl||{};
+  const cells=(arr,key,cls,zeroCol)=>arr.map((v,i)=>{
+    let c='cell'+(cls?' '+cls:'');
+    if((hl[key]||[]).includes(i)) c+=(key==='sum'||key==='p1'||key==='p2')?' hlr':' hl';
+    if(zeroCol===i && v===0) c+=' zero';
+    return `<div class="${c}" style="width:${cellW}px;">${v}</div>`;
+  }).join('');
+  const line=`<div class="divider" style="width:${C*(cellW+2)}px;"></div>`;
+  const lab=t=>t?`<span class="rowlabel">&larr; ${t}</span>`:'';
+  wrap.innerHTML=
+    `<div class="row">${cells(r.carry,'carry','carryCell')}</div>`+
+    `<div class="row">${cells(r.top,'top')}</div>`+
+    `<div class="opline"><div class="opsym">•</div>${cells(r.bot,'bot')}</div>`+line+
+    `<div class="row">${cells(r.p1,'p1')}${lab(frame.lab1)}</div>`+
+    `<div class="opline"><div class="opsym">+</div>${cells(r.p2,'p2','',C-1)}${lab(frame.lab2)}</div>`+
+    `<div class="row">${cells(r.csum,'csum','carryCell')}</div>`+line+
+    `<div class="row">${cells(r.sum,'sum')}</div>`;
+}
+
 function renderGrid(frame){
   const wrap = document.getElementById('gridWrap');
+  if(frame.rows){ renderMul2(frame, wrap); return; }
   if(!frame.gridA || frame.gridA.length===0){ wrap.innerHTML=''; return; }
   const cols = frame.gridA.length;
   const cellW = cols>7 ? 22 : 28;
